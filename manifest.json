@@ -1,0 +1,9 @@
+{
+  "id": "official-gdrive",
+  "name": "Google Drive Sync",
+  "version": "0.1.0",
+  "description": "Sync your Zenith vault with Google Drive.",
+  "author": "Zenith Official",
+  "backend_entry": "backend/main.py",
+  "frontend_entry": "frontend/main.js"
+}
