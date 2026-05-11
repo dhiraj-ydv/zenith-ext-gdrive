@@ -1,0 +1,52 @@
+name: Release to Cloudflare R2
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Get extension name
+        id: ext_name
+        run: echo "EXT_NAME=$(basename ${{ github.repository }} | sed 's/zenith-ext-//')" >> $GITHUB_ENV
+
+      - name: Set Environment
+        id: set_env
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "ENV_NAME=prod" >> $GITHUB_ENV
+            echo "BUCKET=zenith-releases" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == refs/heads/staging ]]; then
+            echo "ENV_NAME=staging" >> $GITHUB_ENV
+            echo "BUCKET=zenith-releases-staging" >> $GITHUB_ENV
+          else
+            echo "ENV_NAME=dev" >> $GITHUB_ENV
+            echo "BUCKET=zenith-releases-dev" >> $GITHUB_ENV
+          fi
+
+      - name: Package Extension
+        run: zip -r official-${{ env.EXT_NAME }}.zext . -x ".git/*" -x ".github/*"
+
+      - name: Upload to Cloudflare R2
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          wrangler r2 object put ${{ env.BUCKET }}/official-${{ env.EXT_NAME }}.zext --file=official-${{ env.EXT_NAME }}.zext --remote
